@@ -6,4 +6,5 @@ Docker compose stack for running Nextcloud. Stack includes Nextcloud app, MariaD
 
 - Nextcloud Docker: https://hub.docker.com/_/nextcloud
 - MariaDB Docker: https://hub.docker.com/_/mariadb
+- Collabora Docker: https://hub.docker.com/r/collabora/code
 - Docker Compose example: https://github.com/docker/awesome-compose/tree/master/nextcloud-redis-mariadb

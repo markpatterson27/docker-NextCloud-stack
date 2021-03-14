@@ -35,6 +35,11 @@ services:
   collabora:
     image: collabora/code
     # container_name: collabora
+    ports:
+      - 9980:9980
+    environment:
+      - extra_params=--o:ssl.enable=false
+    # restart: always
 
 volumes:
   nextcloud:
