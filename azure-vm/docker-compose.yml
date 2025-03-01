@@ -1,0 +1,93 @@
+# Docker Compose file for setting up NextCloud on Azure VM
+
+services:
+  nextcloud:
+    image: nextcloud:31.0
+    volumes:
+      - nextcloud:/var/www/html
+    environment:
+      - VIRTUAL_HOST=${DUCKDNS_SUBDOMAIN}.duckdns.org
+      - LETSENCRYPT_HOST=${DUCKDNS_SUBDOMAIN}.duckdns.org
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=nextcloud
+      - MYSQL_HOST=mariadb
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin
+      - NEXTCLOUD_TRUSTED_DOMAINS=${DUCKDNS_SUBDOMAIN}.duckdns.org *.${DUCKDNS_SUBDOMAIN}.duckdns.org
+    restart: always
+    depends_on:
+      - mariadb
+      - proxy
+
+  mariadb:
+    image: mariadb:11.7
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=nextcloud
+      - MYSQL_PASSWORD=nextcloud
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    restart: always
+
+  proxy:
+    image: nginxproxy/nginx-proxy:1.7-alpine
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy-tier
+      - default
+    restart: always
+
+  letsencrypt-companion:
+    image: nginxproxy/acme-companion:2.5
+    volumes:
+      - certs:/etc/nginx/certs
+      - acme:/etc/acme.sh
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      ACME_CHALLENGE: DNS-01
+      ACMESH_DNS_API_CONFIG: |-
+        DNS_API: dns_duckdns
+        DuckDNS_Token: ${DUCKDNS_TOKEN}
+    networks:
+      - proxy-tier
+    restart: always
+    depends_on:
+      - proxy
+
+  duckdns:
+    image: linuxserver/duckdns:version-bf8528ec
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
+      - TOKEN=${DUCKDNS_TOKEN}
+    restart: always
+    depends_on:
+      - proxy
+
+networks:
+  proxy-tier:
+  
+volumes:
+  nextcloud:
+  db:
+  certs:
+  vhost:
+  html:
+  acme:

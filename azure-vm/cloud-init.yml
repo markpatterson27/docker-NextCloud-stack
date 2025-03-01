@@ -1,0 +1,11 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+
+runcmd:
+  # use convenience script to install docker
+  - curl -fsSL https://get.docker.com | sudo sh
+  - sudo usermod -aG docker azureuser
